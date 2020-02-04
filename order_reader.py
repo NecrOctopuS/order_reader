@@ -12,7 +12,7 @@ import os
 load_dotenv()
 PRICE_LIST = os.getenv('PRICE_LIST')
 FILENAME = os.getenv('FILENAME')
-KEYS = ['Актикул',
+KEYS = ['Артикул',
         'Наименование',
         'Полная стоимость за штуку',
         'Стоимость со скидкой за штуку',
@@ -52,7 +52,7 @@ def extract_text_from_pdf(pdf_path):
 def get_names_and_full_prices_for_order_articles(sheet, article):
     for row in sheet.iter_rows(1):
         for cell in row:
-            if cell.value == article:
+            if str(cell.value) == str(article):
                 name = sheet.cell(row=cell.row, column=3).value
                 full_price = sheet.cell(row=cell.row, column=5).value
                 return name, full_price
@@ -60,7 +60,16 @@ def get_names_and_full_prices_for_order_articles(sheet, article):
 
 
 def get_orders_from_text(text, sheet):
-    order_articles = re.findall(r'000\d\d(E?K?L?\d+[vV]?\d*) *(\d+)', text)
+    # Артикулы вида
+    # E123131
+    # EK123121321
+    # L133213
+    # 12313V121
+    # 12313S1323
+    # 1213A012
+    # 121313T13213
+    # 12311TE121
+    order_articles = re.findall(r'000\d\d(E?K?L?\d+[vVsSaAtT]?[eE]?\d*) *(\d+)', text)
     orders = []
     index = 0
     for article, quantity in order_articles:
@@ -130,7 +139,9 @@ def main(filename):
     sheet = workbook.active
     for pdf_path in pdf_paths:
         if '.pdf' in pdf_path:
+            print(pdf_path)
             text = extract_text_from_pdf(pdf_path)
+            print(text)
             order = get_orders_from_text(text, sheet)
             add_order_to_xls(filename, order)
             os.remove(pdf_path)
